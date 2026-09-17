@@ -134,3 +134,4 @@ node test_core.js
 # Run full end-to-end integration test (Auth -> Upload -> AI Summary -> Flashcards -> Quiz -> Scoring -> Weak Areas -> Gen 2)
 node test_e2e.js
 ```
+Link : https://pocket-mentor-ten.vercel.app/
