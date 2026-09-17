@@ -77,13 +77,14 @@ const executeGrokCall = async (systemPrompt, userPrompt, temperature = 0.2) => {
 };
 
 /**
+/**
  * Call Grok / Groq for multi-turn conversational chat
  */
 export const executeGrokChat = async (messages, temperature = 0.5) => {
   const apiKey = process.env.GROK_API_KEY?.trim();
 
   if (!apiKey || apiKey === "your_grok_api_key_here") {
-    return null;
+    throw new Error("I'm having trouble connecting to the AI right now. Please try again in a moment.");
   }
 
   const isGroqKey = apiKey.startsWith("gsk_");
@@ -115,60 +116,20 @@ export const executeGrokChat = async (messages, temperature = 0.5) => {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`AI Chat API error (${response.status}): ${errorText}`);
+    console.error(`[AI Chat API Error] (${response.status}):`, errorText);
+    if (response.status === 429) {
+      throw new Error("AI service rate limit reached. Please wait a moment and try again.");
+    }
+    throw new Error("I'm having trouble connecting to the AI right now. Please try again in a moment.");
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content || null;
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error("I'm having trouble connecting to the AI right now. Please try again in a moment.");
+  }
+  return content.trim();
 };
-
-// ==========================================
-// 0. CHATBOT: AI STUDY MENTOR
-// ==========================================
-export const chatWithMentor = async ({ message, conversationHistory = [], noteContext = "", noteTitle = "" }) => {
-  let systemPrompt = `You are Pocket Mentor, a friendly, encouraging, and deeply knowledgeable AI Study Tutor.
-Your goal is to help the student understand difficult academic concepts, prepare for exams, clarify confusing points, and test their comprehension.
-Provide clear, intuitive, and pedagogical answers with relatable examples or bullet points when helpful. Keep responses focused and easy to digest for students.`;
-
-  if (noteContext) {
-    systemPrompt += `\n\nSTUDENT'S CURRENT STUDY MATERIAL (${noteTitle || "Active Notes"}):\n${noteContext.slice(0, 10000)}\n\nAlways ground your answers in the student's study notes whenever applicable, and clarify concepts using the material provided.`;
-  }
-
-  const formattedMessages = [
-    { role: "system", content: systemPrompt },
-    ...conversationHistory.slice(-8).map((msg) => ({
-      role: msg.role === "user" ? "user" : "assistant",
-      content: String(msg.content),
-    })),
-    { role: "user", content: message },
-  ];
-
-  try {
-    const reply = await executeGrokChat(formattedMessages);
-    if (reply && reply.trim().length > 0) {
-      return reply.trim();
-    }
-  } catch (err) {
-    console.error("[Grok Chat Error]", err.message);
-  }
-
-  // Graceful fallback tutor response
-  return createFallbackChatResponse(message, noteContext);
-};
-
-function createFallbackChatResponse(message, noteContext) {
-  const lower = message.toLowerCase();
-  if (lower.includes("deadlock")) {
-    return "In operating systems, a deadlock happens when multiple processes are stuck waiting for resources held by each other in a circular chain. The 4 necessary conditions are: 1) Mutual Exclusion, 2) Hold and Wait, 3) No Preemption, and 4) Circular Wait. To avoid it, algorithms like Banker's Algorithm ensure safe state resource allocation.";
-  }
-  if (lower.includes("summary") || lower.includes("summarize")) {
-    return "Here is a quick recap: Focus on foundational principles, verify operational constraints, and pay close attention to differences between algorithms or mechanisms mentioned in your notes.";
-  }
-  if (lower.includes("quiz") || lower.includes("test")) {
-    return "Great idea! Test your active recall using the 'AI MCQ Quiz' tab on your note. It evaluates your answers and flags any topics where your accuracy falls below 60% so you can revise them directly.";
-  }
-  return `That's an important study question! Review the core definitions and conditions outlined in your notes. Try breaking the concept into its key rules, inputs, and outputs. Feel free to ask me to explain any specific term or formula!`;
-}
 
 // ==========================================
 // 1. SUMMARY GENERATION

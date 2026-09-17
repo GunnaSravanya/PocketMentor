@@ -87,7 +87,7 @@ export const NoteDetailsPage = () => {
 
         <div className="flex items-center gap-2">
           <Link
-            to="/app/chat"
+            to={`/app/chat?noteId=${activeNote._id}`}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500/20 rounded-xl transition"
           >
             <Bot className="w-3.5 h-3.5" />

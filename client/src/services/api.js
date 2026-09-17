@@ -45,6 +45,11 @@ export const mentorService = {
   reviseTopic: (attemptId, topic) =>
     api.post(`/api/mentor/revise/${attemptId}/${encodeURIComponent(topic)}`),
   chat: (data) => api.post("/api/mentor/chat", data),
+  sendChatMessage: (data) => api.post("/api/mentor/chat", data),
+  getConversations: () => api.get("/api/mentor/conversations"),
+  getConversation: (conversationId) => api.get(`/api/mentor/conversations/${conversationId}`),
+  deleteConversation: (conversationId) => api.delete(`/api/mentor/conversations/${conversationId}`),
+  renameConversation: (conversationId, title) => api.patch(`/api/mentor/conversations/${conversationId}`, { title }),
   getStats: () => api.get("/api/mentor/stats"),
   getHistory: () => api.get("/api/mentor/history"),
 };

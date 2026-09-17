@@ -3,6 +3,7 @@ import { SummaryModel } from "../models/SummaryModel.js";
 import { FlashcardSetModel } from "../models/FlashcardSetModel.js";
 import { QuizModel } from "../models/QuizModel.js";
 import { QuizAttemptModel } from "../models/QuizAttemptModel.js";
+import { ConversationModel } from "../models/ConversationModel.js";
 import { WEAK_AREA_THRESHOLD } from "../config/constants.js";
 import {
   generateSummaryFromNotes,
@@ -10,8 +11,13 @@ import {
   generateQuizFromNotes,
   generateExplanationsForMistakes,
   generateWeakAreaRevision,
-  chatWithMentor,
+  executeGrokChat,
 } from "../services/grokService.js";
+import {
+  buildChatContext,
+  generateConversationTitle,
+  maybeUpdateConversationSummary,
+} from "../services/chatContextService.js";
 import { sendSuccess, sendError } from "../utils/apiResponse.js";
 
 /**
@@ -584,40 +590,220 @@ export const getQuizHistory = async (req, res) => {
 };
 
 /**
- * Chatbot with Grok AI for answering student questions & doubts
+ * Chatbot with Grok AI for answering student questions & doubts (Persistent & Context-Aware)
  */
 export const chatWithMentorController = async (req, res) => {
   try {
-    const { message, conversationHistory, noteId } = req.body;
+    const { message, conversationId, noteId } = req.body;
+    const userId = req.user._id;
 
     if (!message || typeof message !== "string" || !message.trim()) {
       return sendError(res, 400, "Message cannot be empty");
     }
 
-    let noteContext = "";
-    let noteTitle = "";
-
+    let note = null;
     if (noteId) {
-      const note = await NoteModel.findById(noteId);
-      if (note && note.userId.toString() === req.user._id.toString()) {
-        noteContext = note.extractedText;
-        noteTitle = note.title;
+      note = await NoteModel.findOne({ _id: noteId, userId });
+      if (!note) {
+        return sendError(res, 404, "Selected note not found or access denied");
       }
     }
 
-    const reply = await chatWithMentor({
-      message: message.trim(),
-      conversationHistory: Array.isArray(conversationHistory) ? conversationHistory : [],
-      noteContext,
-      noteTitle,
+    let conversation = null;
+    if (conversationId) {
+      conversation = await ConversationModel.findOne({ _id: conversationId, userId });
+      if (!conversation) {
+        return sendError(res, 404, "Conversation not found or access denied");
+      }
+      // If note was specified and not set yet, update conversation noteId
+      if (noteId && !conversation.noteId) {
+        conversation.noteId = note._id;
+      }
+    } else {
+      // Create new conversation with auto-generated title
+      const initialTitle = generateConversationTitle(message);
+      conversation = new ConversationModel({
+        userId,
+        noteId: note?._id || undefined,
+        title: initialTitle,
+        messages: [],
+      });
+    }
+
+    // If conversation already has noteId and no note was loaded yet, load it
+    if (!note && conversation.noteId) {
+      note = await NoteModel.findOne({ _id: conversation.noteId, userId });
+    }
+
+    // Build context with System Instructions + Conversation Summary + Note Context + Bounded History + Message
+    const chatContext = buildChatContext({
+      conversation,
+      note,
+      currentMessage: message.trim(),
     });
 
+    // Call Grok / Groq AI
+    let aiReply;
+    try {
+      aiReply = await executeGrokChat(chatContext.messages);
+    } catch (grokError) {
+      console.error("[Grok Chat Execution Error]", grokError);
+      return sendError(res, 500, grokError.message || "I'm having trouble connecting to the AI right now. Please try again in a moment.");
+    }
+
+    const userMsg = {
+      role: "user",
+      content: message.trim(),
+      timestamp: new Date(),
+    };
+
+    const assistantMsg = {
+      role: "assistant",
+      content: aiReply,
+      timestamp: new Date(),
+    };
+
+    conversation.messages.push(userMsg);
+    conversation.messages.push(assistantMsg);
+
+    // Update title if needed
+    if (conversation.title === "New Chat" || conversation.messages.length === 2) {
+      conversation.title = generateConversationTitle(message);
+    }
+
+    // Condense older messages into conversationSummary if length exceeds threshold
+    maybeUpdateConversationSummary(conversation);
+
+    await conversation.save();
+
     return sendSuccess(res, 200, "Mentor reply received", {
-      reply,
-      timestamp: new Date().toISOString(),
+      conversationId: conversation._id,
+      title: conversation.title,
+      noteId: conversation.noteId || null,
+      message: assistantMsg,
+      reply: aiReply,
+      messages: conversation.messages,
     });
   } catch (error) {
     console.error("[Chat Controller Error]", error);
     return sendError(res, 500, error.message || "Failed to process chat message");
+  }
+};
+
+/**
+ * Get all conversations for the authenticated user
+ */
+export const getConversations = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const conversations = await ConversationModel.find({ userId })
+      .sort({ updatedAt: -1 })
+      .select("title noteId updatedAt createdAt messages conversationSummary")
+      .populate("noteId", "title");
+
+    const formatted = conversations.map((c) => ({
+      _id: c._id,
+      title: c.title,
+      noteId: c.noteId?._id || c.noteId || null,
+      noteTitle: c.noteId?.title || null,
+      messageCount: c.messages?.length || 0,
+      lastMessage: c.messages?.length > 0 ? c.messages[c.messages.length - 1].content.slice(0, 120) : "",
+      updatedAt: c.updatedAt,
+      createdAt: c.createdAt,
+    }));
+
+    return sendSuccess(res, 200, "Conversations retrieved", { conversations: formatted });
+  } catch (error) {
+    console.error("[Get Conversations Error]", error);
+    return sendError(res, 500, "Failed to retrieve conversations");
+  }
+};
+
+/**
+ * Get a single conversation with full message history
+ */
+export const getConversationById = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const userId = req.user._id;
+
+    const conversation = await ConversationModel.findOne({ _id: conversationId, userId })
+      .populate("noteId", "title");
+
+    if (!conversation) {
+      return sendError(res, 404, "Conversation not found or access denied");
+    }
+
+    return sendSuccess(res, 200, "Conversation retrieved", {
+      conversation: {
+        _id: conversation._id,
+        title: conversation.title,
+        noteId: conversation.noteId?._id || conversation.noteId || null,
+        noteTitle: conversation.noteId?.title || null,
+        conversationSummary: conversation.conversationSummary || "",
+        messages: conversation.messages,
+        createdAt: conversation.createdAt,
+        updatedAt: conversation.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("[Get Conversation By Id Error]", error);
+    return sendError(res, 500, "Failed to retrieve conversation");
+  }
+};
+
+/**
+ * Delete a conversation
+ */
+export const deleteConversation = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const userId = req.user._id;
+
+    const deleted = await ConversationModel.findOneAndDelete({ _id: conversationId, userId });
+    if (!deleted) {
+      return sendError(res, 404, "Conversation not found or access denied");
+    }
+
+    return sendSuccess(res, 200, "Conversation deleted successfully");
+  } catch (error) {
+    console.error("[Delete Conversation Error]", error);
+    return sendError(res, 500, "Failed to delete conversation");
+  }
+};
+
+/**
+ * Rename a conversation (optional PATCH)
+ */
+export const renameConversation = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { title } = req.body;
+    const userId = req.user._id;
+
+    if (!title || typeof title !== "string" || !title.trim()) {
+      return sendError(res, 400, "Title cannot be empty");
+    }
+
+    const conversation = await ConversationModel.findOneAndUpdate(
+      { _id: conversationId, userId },
+      { title: title.trim() },
+      { new: true }
+    );
+
+    if (!conversation) {
+      return sendError(res, 404, "Conversation not found or access denied");
+    }
+
+    return sendSuccess(res, 200, "Conversation renamed", {
+      conversation: {
+        _id: conversation._id,
+        title: conversation.title,
+      },
+    });
+  } catch (error) {
+    console.error("[Rename Conversation Error]", error);
+    return sendError(res, 500, "Failed to rename conversation");
   }
 };

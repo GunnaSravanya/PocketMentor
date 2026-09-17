@@ -12,6 +12,10 @@ import {
   getDashboardStats,
   getQuizHistory,
   chatWithMentorController,
+  getConversations,
+  getConversationById,
+  deleteConversation,
+  renameConversation,
 } from "../../controllers/mentorController.js";
 import { protect } from "../../middleware/authMiddleware.js";
 
@@ -42,7 +46,11 @@ router.get("/stats", getDashboardStats);
 // Weak Area Revision
 router.all("/revise/:attemptId/:topic", reviseWeakTopic);
 
-// Grok AI Chatbot
+// Grok AI Chatbot & Persistent Conversations
 router.post("/chat", chatWithMentorController);
+router.get("/conversations", getConversations);
+router.get("/conversations/:conversationId", getConversationById);
+router.delete("/conversations/:conversationId", deleteConversation);
+router.patch("/conversations/:conversationId", renameConversation);
 
 export default router;

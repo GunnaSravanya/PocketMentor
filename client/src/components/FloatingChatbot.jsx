@@ -31,6 +31,7 @@ export const FloatingChatbot = () => {
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [useCurrentNoteContext, setUseCurrentNoteContext] = useState(true);
+  const [floatingConversationId, setFloatingConversationId] = useState(null);
 
   const { activeNote } = useNoteStore();
   const location = useLocation();
@@ -68,11 +69,15 @@ export const FloatingChatbot = () => {
     try {
       const payload = {
         message: textToSend,
-        conversationHistory: messages.map((m) => ({ role: m.role, content: m.content })),
+        conversationId: floatingConversationId || undefined,
         noteId: useCurrentNoteContext && activeNote?._id ? activeNote._id : null,
       };
 
       const res = await mentorService.chat(payload);
+      if (res.data?.data?.conversationId) {
+        setFloatingConversationId(res.data.data.conversationId);
+      }
+
       const replyText =
         res.data?.data?.reply ||
         "I've processed your question. Make sure to review the core formulas and definitions in your notes!";
@@ -91,7 +96,8 @@ export const FloatingChatbot = () => {
         {
           role: "assistant",
           content:
-            "I ran into a temporary issue connecting to Grok AI. Please check your notes or ask again in a moment.",
+            err.response?.data?.message ||
+            "I'm having trouble connecting to the AI right now. Please try again in a moment.",
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           isError: true,
         },
@@ -109,6 +115,7 @@ export const FloatingChatbot = () => {
   };
 
   const clearChat = () => {
+    setFloatingConversationId(null);
     setMessages([
       {
         role: "assistant",
