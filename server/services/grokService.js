@@ -21,8 +21,8 @@ const cleanJsonString = (rawText) => {
 
 const getGroqModelName = (userModel) => {
   const model = (userModel || "").trim();
-  if (!model || model.includes("grok") || model.includes("qwen3.8")) {
-    return "llama-3.3-70b-versatile";
+  if (!model || model.includes("grok") || model.includes("llama") || model.includes("mixtral")) {
+    return "qwen/qwen3.8-27b";
   }
   return model;
 };
@@ -45,7 +45,7 @@ const executeGrokCall = async (systemPrompt, userPrompt, temperature = 0.2) => {
     : "https://api.x.ai/v1/chat/completions";
 
   const modelsToTry = isGroqKey
-    ? [getGroqModelName(process.env.GROK_MODEL), "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
+    ? [getGroqModelName(process.env.GROK_MODEL), "openai/gpt-oss-120b", "openai/gpt-oss-20b"]
     : [process.env.GROK_MODEL || "grok-2-latest"];
 
   for (const modelName of modelsToTry) {
@@ -102,35 +102,34 @@ export function getOfflineMentorReply(messages) {
   const subjectMatch = systemMsg.match(/Subject:\s*([^\n]+)/i) || systemMsg.match(/studying\s*([^\.\n]+)/i);
   if (subjectMatch) subjectHint = subjectMatch[1].trim();
 
+  if (lower.includes("memory management") || lower.includes("paging") || lower.includes("virtual memory")) {
+    return `### Memory Management Overview
+
+**Memory Management** is the core process by which an operating system dynamically allocates, tracks, and recycles computer memory (RAM) for active processes.
+
+#### Key Concepts & Mechanisms:
+1. **Memory Allocation**: Assigns memory blocks dynamically to running applications via the **Stack** (local variables, function calls) and **Heap** (dynamically allocated objects).
+2. **Paging & Virtual Memory**: Divides logical memory into fixed-size pages mapped to physical frames, allowing programs to exceed physical RAM limits.
+3. **Protection & Isolation**: Ensures process address spaces remain isolated to prevent memory corruption and unauthorized access.
+4. **Deallocation & Garbage Collection**: Reclaims unused memory automatically or via explicit deallocation to avoid memory leaks.`;
+  }
+
   if (lower.includes("hello") || lower.includes("hi") || lower.includes("hey")) {
-    return `Hello! I'm your Living AI Mentor. I'm currently running in continuous study mode to support you. How can I help you master ${subjectHint} today?`;
+    return `Hello! I'm your Living AI Mentor. I'm ready to help you explore and master **${subjectHint}**. What specific concept or question would you like to discuss?`;
   }
 
-  if (lower.includes("summary") || lower.includes("summarize") || lower.includes("explain")) {
-    return `Here is a high-yield summary breakdown of **${subjectHint}**:
+  const topicName = lastUserMsg.replace(/^(explain|what is|tell me about|how does|define|summarize)\s+/i, "").trim() || subjectHint;
 
-1. **Core Concept**: Focus on the foundational definitions and primary mechanisms outlined in your notes.
-2. **Key Mechanism**: Understand how the components interact and how data or processes flow step-by-step.
-3. **Important Takeaway**: Pay special attention to edge cases, trade-offs, and core formulas during revision.
+  return `### Detailed Breakdown: ${topicName}
 
-What specific concept or question would you like to explore next?`;
-  }
+Understanding **${topicName}** is essential for mastering **${subjectHint}**.
 
-  if (lower.includes("quiz") || lower.includes("question") || lower.includes("test")) {
-    return `Great initiative! To test your understanding of **${subjectHint}**, ask yourself:
+#### Core Highlights:
+1. **Foundational Principles**: Focus on the core definitions, operational constraints, and structural rules in your course materials.
+2. **Key Execution Flow**: Trace how inputs are transformed step-by-step through primary mechanisms.
+3. **High-Yield Revision Strategy**: Pay close attention to edge cases, performance trade-offs, and core formulas.
 
-*What is the primary constraint or rule governing this topic, and what happens when it is violated?*
-
-Try explaining this concept in your own words, and I'll help guide your response!`;
-  }
-
-  return `I've analyzed your question regarding **${subjectHint}**: "${lastUserMsg.slice(0, 100)}...".
-
-To master this concept effectively:
-- Focus on the fundamental rules and core definitions in your study material.
-- Connect this concept with the key formulas and practical applications in your course notes.
-
-*(Continuous learning mode active. If your internet connection was temporarily interrupted, I'll automatically sync back to full cloud models as soon as your network reconnects!)*`;
+What specific question or problem regarding **${topicName}** shall we solve next?`;
 }
 
 /**
@@ -149,7 +148,7 @@ export const executeGrokChat = async (messages, temperature = 0.5) => {
     : "https://api.x.ai/v1/chat/completions";
 
   const modelsToTry = isGroqKey
-    ? [getGroqModelName(process.env.GROK_MODEL), "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
+    ? [getGroqModelName(process.env.GROK_MODEL), "openai/gpt-oss-120b", "openai/gpt-oss-20b"]
     : [process.env.GROK_MODEL || "grok-2-latest"];
 
   for (const modelName of modelsToTry) {
