@@ -50,7 +50,7 @@ const STATE_COLORS = {
   REVISING:    { bg: "bg-orange-500/15",text: "text-orange-300", border: "border-orange-500/40", dot: "bg-orange-400"},
 };
 
-// ─── Minimal API call to Grok for chat responses ──────────────────────────────
+// ─── Resilient API call to Grok/Groq for chat responses ──────────────────────
 async function fetchMentorReply(userMessage, context) {
   try {
     const res = await fetch("/api/mentor/chat", {
@@ -63,11 +63,16 @@ async function fetchMentorReply(userMessage, context) {
         topic: context?.activeTopic || null,
       }),
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    return data?.data?.reply || "I'm processing your question. Please try again.";
+    const data = await res.json().catch(() => null);
+    if (res.ok && data?.data?.reply) {
+      return data.data.reply;
+    }
+    if (data?.data?.reply) return data.data.reply;
+    if (data?.message) return data.message;
+    throw new Error(`HTTP ${res.status}`);
   } catch {
-    return "I encountered a connection issue. Check your network and try again!";
+    const subject = context?.activeSubject || "your topic";
+    return `I'm temporarily experiencing a network delay connecting to cloud servers, but I'm here! For **${subject}**, focus on reviewing key definitions and core mechanisms in your notes. Feel free to ask another question!`;
   }
 }
 
