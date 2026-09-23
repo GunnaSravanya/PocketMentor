@@ -102,34 +102,72 @@ export function getOfflineMentorReply(messages) {
   const subjectMatch = systemMsg.match(/Subject:\s*([^\n]+)/i) || systemMsg.match(/studying\s*([^\.\n]+)/i);
   if (subjectMatch) subjectHint = subjectMatch[1].trim();
 
-  if (lower.includes("memory management") || lower.includes("paging") || lower.includes("virtual memory")) {
-    return `### Memory Management Overview
+  // 1. Operating Systems & Memory Management
+  if (lower.includes("memory management") || lower.includes("paging") || lower.includes("virtual memory") || lower.includes("heap") || lower.includes("stack")) {
+    return `### Memory Management Deep-Dive
 
-**Memory Management** is the core process by which an operating system dynamically allocates, tracks, and recycles computer memory (RAM) for active processes.
+**Memory Management** is the fundamental OS process that dynamically coordinates physical RAM and virtual address space for running programs.
 
-#### Key Concepts & Mechanisms:
-1. **Memory Allocation**: Assigns memory blocks dynamically to running applications via the **Stack** (local variables, function calls) and **Heap** (dynamically allocated objects).
-2. **Paging & Virtual Memory**: Divides logical memory into fixed-size pages mapped to physical frames, allowing programs to exceed physical RAM limits.
-3. **Protection & Isolation**: Ensures process address spaces remain isolated to prevent memory corruption and unauthorized access.
-4. **Deallocation & Garbage Collection**: Reclaims unused memory automatically or via explicit deallocation to avoid memory leaks.`;
+#### Key Mechanisms & Concepts:
+1. **Stack vs Heap Allocation**: 
+   - **Stack**: Stores static local variables and active function call frames (fast LIFO management).
+   - **Heap**: Stores dynamic objects allocated at runtime (requires explicit allocation/deallocation or garbage collection).
+2. **Virtual Memory & Paging**:
+   - Maps virtual addresses into physical memory frames using Page Tables.
+   - Enables programs to run even if their total memory footprint exceeds physical hardware RAM.
+3. **Protection & Isolation**:
+   - Prevents processes from overwriting or reading other process memory spaces.
+4. **Deallocation & Leak Prevention**:
+   - Reclaims unused objects to prevent memory leaks and out-of-memory crashes.`;
   }
 
+  // 2. Data Structures & Algorithms
+  if (lower.includes("data structure") || lower.includes("tree") || lower.includes("graph") || lower.includes("sort") || lower.includes("array") || lower.includes("linked list")) {
+    return `### Data Structures & Algorithmic Efficiency
+
+Data structures dictate how computer memory is organized and accessed for computational tasks.
+
+#### Core Fundamentals:
+1. **Linear vs Non-Linear Layouts**:
+   - **Arrays & Linked Lists**: Provide sequential access with distinct trade-offs between contiguous memory access and insertion time complexity.
+   - **Trees & Graphs**: Store hierarchical or networked data relationships (e.g., Binary Search Trees, Graphs).
+2. **Time & Space Complexity (Big-O)**:
+   - Evaluates search, insertion, and deletion efficiency across best, average, and worst-case execution paths.
+3. **Optimization Strategy**:
+   - Choose contiguous array memory for CPU cache locality, or pointer-based structures for dynamic resizing.`;
+  }
+
+  // 3. Object-Oriented Programming
+  if (lower.includes("oop") || lower.includes("object oriented") || lower.includes("class") || lower.includes("inheritance") || lower.includes("polymorphism")) {
+    return `### Object-Oriented Programming (OOP) Principles
+
+OOP organizes software design around discrete data objects rather than functions and logic alone.
+
+#### The 4 Pillars of OOP:
+1. **Encapsulation**: Bundles data attributes and methods into classes while restricting direct external access to internal state.
+2. **Abstraction**: Exposes clean interface boundaries while hiding underlying execution complexity.
+3. **Inheritance**: Enables child classes to reuse and extend attributes and behaviors from parent classes.
+4. **Polymorphism**: Allows different objects to respond to identical method calls in customized ways.`;
+  }
+
+  // 4. Greetings
   if (lower.includes("hello") || lower.includes("hi") || lower.includes("hey")) {
-    return `Hello! I'm your Living AI Mentor. I'm ready to help you explore and master **${subjectHint}**. What specific concept or question would you like to discuss?`;
+    return `Hello! I'm your Living AI Mentor. I'm active and ready to help you master **${subjectHint}**. What concept or problem would you like to explore today?`;
   }
 
+  // 5. General Dynamic Response Breakdown
   const topicName = lastUserMsg.replace(/^(explain|what is|tell me about|how does|define|summarize)\s+/i, "").trim() || subjectHint;
 
-  return `### Detailed Breakdown: ${topicName}
+  return `### Academic Explanation: ${topicName}
 
 Understanding **${topicName}** is essential for mastering **${subjectHint}**.
 
-#### Core Highlights:
-1. **Foundational Principles**: Focus on the core definitions, operational constraints, and structural rules in your course materials.
-2. **Key Execution Flow**: Trace how inputs are transformed step-by-step through primary mechanisms.
-3. **High-Yield Revision Strategy**: Pay close attention to edge cases, performance trade-offs, and core formulas.
+#### Core Architectural Breakdown:
+1. **Primary Definition & Purpose**: Focus on the core structural rules, input parameters, and operational boundaries defined in your course material.
+2. **Execution Workflow**: Trace step-by-step how state transitions, operations, or computations execute under standard conditions.
+3. **Key Study Takeaway**: Pay close attention to edge cases, system trade-offs, and fundamental formulas during exam revision.
 
-What specific question or problem regarding **${topicName}** shall we solve next?`;
+What specific sub-topic or practice question regarding **${topicName}** shall we solve next?`;
 }
 
 /**
@@ -152,38 +190,40 @@ export const executeGrokChat = async (messages, temperature = 0.5) => {
     : [process.env.GROK_MODEL || "grok-2-latest"];
 
   for (const modelName of modelsToTry) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: modelName,
-          messages,
-          temperature,
-        }),
-        signal: controller.signal,
-      });
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: modelName,
+            messages,
+            temperature,
+          }),
+          signal: controller.signal,
+        });
 
-      clearTimeout(timeoutId);
+        clearTimeout(timeoutId);
 
-      if (response.ok) {
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content;
-        if (content && content.trim().length > 0) {
-          return content.trim();
+        if (response.ok) {
+          const data = await response.json();
+          const content = data.choices?.[0]?.message?.content;
+          if (content && content.trim().length > 0) {
+            return content.trim();
+          }
+        } else {
+          const errorText = await response.text();
+          console.warn(`[AI Chat API Warning] Model ${modelName} (Attempt ${attempt + 1}) returned status ${response.status}:`, errorText.slice(0, 150));
         }
-      } else {
-        const errorText = await response.text();
-        console.warn(`[AI Chat API Warning] Model ${modelName} returned (${response.status}):`, errorText.slice(0, 150));
+      } catch (err) {
+        console.warn(`[AI Chat Attempt Failed] Model ${modelName} (Attempt ${attempt + 1}):`, err.message || err);
       }
-    } catch (err) {
-      console.warn(`[AI Chat Attempt Failed] Model ${modelName}:`, err.message || err);
     }
   }
 
