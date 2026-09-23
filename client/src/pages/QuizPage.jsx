@@ -11,7 +11,10 @@ import {
   AlertTriangle,
   Loader2,
   HelpCircle,
+  ShieldAlert,
+  Bot,
 } from "lucide-react";
+import { mentorEvents } from "../services/mentorEvents";
 
 export const QuizPage = () => {
   const { quizId } = useParams();
@@ -22,10 +25,12 @@ export const QuizPage = () => {
   const [selectedAnswers, setSelectedAnswers] = useState({}); // { [questionId]: selectedOption }
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [negativeMarkingEnabled, setNegativeMarkingEnabled] = useState(false);
 
   useEffect(() => {
     if (quizId) {
       fetchQuiz(quizId);
+      mentorEvents.quizStarted(activeQuiz?.noteTitle || "Quiz");
     }
   }, [quizId, fetchQuiz]);
 
@@ -66,7 +71,13 @@ export const QuizPage = () => {
       selectedAnswer: selectedAnswers[q._id] || "",
     }));
 
-    const result = await submitQuiz(quizId, formattedAnswers);
+    const markingPayload = {
+      enabled: negativeMarkingEnabled,
+      correctMarks: 1,
+      negativeMarks: negativeMarkingEnabled ? 0.25 : 0,
+    };
+
+    const result = await submitQuiz(quizId, formattedAnswers, markingPayload);
     if (result.success && result.data?.attemptId) {
       navigate(`/app/quiz/attempt/${result.data.attemptId}`);
     } else {
@@ -88,8 +99,10 @@ export const QuizPage = () => {
     return (
       <div className="text-center py-16 bg-slate-900/80 rounded-3xl border border-slate-800 max-w-xl mx-auto backdrop-blur-sm">
         <BrainCircuit className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-        <h3 className="font-bold text-white text-lg">Quiz not available</h3>
-        <p className="text-xs text-slate-400 mt-1 mb-4">No questions found in this quiz generation.</p>
+        <h3 className="font-bold text-white text-base">No questions found</h3>
+        <p className="text-xs text-slate-400 mt-1 mb-4">
+          This quiz doesn't contain any active questions.
+        </p>
         <Link
           to="/app"
           className="px-4 py-2 bg-gradient-to-r from-brand-600 to-cyan-600 hover:from-brand-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold transition shadow-md"
@@ -103,7 +116,7 @@ export const QuizPage = () => {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Back button & meta */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           to={`/app/notes/${activeQuiz.noteId}`}
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition"
@@ -112,9 +125,26 @@ export const QuizPage = () => {
           <span>Exit Quiz</span>
         </Link>
 
-        <span className="text-xs font-bold px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-          Generation #{activeQuiz.generationNumber}
-        </span>
+        <div className="flex items-center gap-2.5">
+          {/* Optional Negative Marking Switch */}
+          <button
+            type="button"
+            onClick={() => setNegativeMarkingEnabled(!negativeMarkingEnabled)}
+            className={`px-3 py-1 rounded-full text-xs font-bold border transition flex items-center gap-1.5 ${
+              negativeMarkingEnabled
+                ? "bg-rose-500/15 text-rose-300 border-rose-500/40 shadow-xs shadow-rose-500/10"
+                : "bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-slate-200"
+            }`}
+            title="Toggle negative marking: When enabled, incorrect answers deduct 0.25 marks"
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            <span>Negative Marking: {negativeMarkingEnabled ? "ON (-0.25)" : "OFF"}</span>
+          </button>
+
+          <span className="text-xs font-bold px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+            Generation #{activeQuiz.generationNumber}
+          </span>
+        </div>
       </div>
 
       {submitError && (

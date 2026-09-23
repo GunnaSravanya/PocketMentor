@@ -62,10 +62,10 @@ export const useQuizStore = create((set) => ({
     }
   },
 
-  submitQuiz: async (quizId, answers) => {
+  submitQuiz: async (quizId, answers, marking = null) => {
     try {
       set({ submitting: true, error: null });
-      const res = await mentorService.submitQuiz(quizId, answers);
+      const res = await mentorService.submitQuiz(quizId, answers, marking);
       if (res.data.success) {
         set({ submitting: false });
         return { success: true, data: res.data.data };

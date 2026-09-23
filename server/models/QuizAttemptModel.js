@@ -80,6 +80,27 @@ const QuizAttemptSchema = new Schema(
           type: Number,
           required: true,
         },
+
+        mastered: {
+          type: Boolean,
+          default: false,
+        },
+      },
+    ],
+
+    marking: {
+      enabled: { type: Boolean, default: false },
+      correctMarks: { type: Number, default: 1 },
+      negativeMarks: { type: Number, default: 0 },
+    },
+
+    topicMastery: [
+      {
+        topic: { type: String, required: true },
+        correct: { type: Number, required: true },
+        total: { type: Number, required: true },
+        accuracy: { type: Number, required: true },
+        mastered: { type: Boolean, default: false },
       },
     ],
   },

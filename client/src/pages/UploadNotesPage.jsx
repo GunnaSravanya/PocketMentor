@@ -9,7 +9,10 @@ import {
   AlertCircle,
   CheckCircle,
   FileUp,
+  Bot,
+  Sparkles,
 } from "lucide-react";
+import { mentorEvents } from "../services/mentorEvents";
 
 export const UploadNotesPage = () => {
   const [activeTab, setActiveTab] = useState("file"); // "file" | "text"
@@ -18,6 +21,7 @@ export const UploadNotesPage = () => {
   const [file, setFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [scanStep, setScanStep] = useState("");
 
   const { createNote, uploading } = useNoteStore();
   const navigate = useNavigate();
@@ -59,21 +63,31 @@ export const UploadNotesPage = () => {
     e.preventDefault();
     setErrorMessage("");
 
+    const noteTitle = title.trim() || (file ? file.name.replace(/\.[^/.]+$/, "") : "Study Notes");
+
     if (activeTab === "file") {
       if (!file) {
         setErrorMessage("Please select or drop a document file first.");
         return;
       }
+
+      mentorEvents.noteUploaded(noteTitle);
+      setScanStep("Reading material & detecting structure...");
+
       const formData = new FormData();
       formData.append("file", file);
       if (title.trim()) {
         formData.append("title", title.trim());
       }
 
+      setTimeout(() => setScanStep("Understanding concepts & terminology..."), 1200);
+
       const result = await createNote(formData, true);
       if (result.success && result.data?.noteId) {
+        mentorEvents.kitReady();
         navigate(`/app/notes/${result.data.noteId}`);
       } else {
+        mentorEvents.resetToIdle();
         setErrorMessage(result.message || "Failed to process document");
       }
     } else {
@@ -81,6 +95,9 @@ export const UploadNotesPage = () => {
         setErrorMessage("Please paste sufficient study notes (at least 10 characters).");
         return;
       }
+
+      mentorEvents.noteUploaded(noteTitle);
+      setScanStep("Analyzing raw study notes...");
 
       const payload = {
         title: title.trim() || "Untitled Note",
@@ -90,8 +107,10 @@ export const UploadNotesPage = () => {
 
       const result = await createNote(payload, false);
       if (result.success && result.data?.noteId) {
+        mentorEvents.kitReady();
         navigate(`/app/notes/${result.data.noteId}`);
       } else {
+        mentorEvents.resetToIdle();
         setErrorMessage(result.message || "Failed to save notes");
       }
     }
@@ -254,6 +273,24 @@ export const UploadNotesPage = () => {
               <p className="text-xs text-slate-500 mt-1">
                 {text.length} characters entered.
               </p>
+            </div>
+          )}
+
+          {uploading && (
+            <div className="relative p-4 rounded-2xl bg-slate-950/80 border border-cyan-500/40 overflow-hidden space-y-2">
+              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent animate-pulse" />
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-cyan-300 flex items-center gap-2">
+                  <Bot className="w-4 h-4 text-cyan-400 animate-spin" />
+                  <span>{scanStep || "Living Mentor Analyzing Document..."}</span>
+                </span>
+                <span className="font-mono text-[10px] text-slate-400 uppercase tracking-wider">
+                  SCANNING
+                </span>
+              </div>
+              <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-purple-500 via-cyan-400 to-emerald-400 animate-[pulse_1.5s_ease-in-out_infinite] w-full" />
+              </div>
             </div>
           )}
 

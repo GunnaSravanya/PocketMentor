@@ -18,11 +18,15 @@ import {
   Sparkles,
   Bot,
 } from "lucide-react";
+import { useMentorStore } from "../store/mentorStore";
+import { MentorStatusOrb } from "../components/mentor/MentorStatusOrb";
+import { KnowledgePulse } from "../components/mentor/KnowledgePulse";
 
 export const DashboardPage = () => {
   const { user } = useAuthStore();
   const { notes, fetchNotes, deleteNote, loading: notesLoading } = useNoteStore();
   const { stats, fetchStats } = useQuizStore();
+  const { setMentorSpaceOpen } = useMentorStore();
 
   useEffect(() => {
     fetchNotes();
@@ -62,13 +66,24 @@ export const DashboardPage = () => {
           </p>
         </div>
 
-        <div className="relative z-10 flex flex-wrap gap-3">
+        <div className="relative z-10 flex flex-wrap items-center gap-3">
+          <MentorStatusOrb />
+
+          <button
+            onClick={() => setMentorSpaceOpen(true)}
+            className="px-4 py-2.5 bg-gradient-to-r from-purple-600/30 to-cyan-600/30 hover:from-purple-600/50 hover:to-cyan-600/50 text-cyan-300 border border-cyan-500/40 font-bold rounded-2xl transition flex items-center gap-2 text-xs shadow-sm hover:scale-[1.02]"
+            title="Open immersive Living AI Mentor Workspace"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Study with Mentor</span>
+          </button>
+
           <Link
             to="/app/chat"
-            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 font-bold rounded-2xl transition flex items-center gap-2 text-xs"
+            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold rounded-2xl transition flex items-center gap-2 text-xs"
           >
             <Bot className="w-4 h-4 text-cyan-400" />
-            <span>AI Tutor</span>
+            <span>AI Chat</span>
           </Link>
 
           <Link
@@ -76,7 +91,7 @@ export const DashboardPage = () => {
             className="px-5 py-2.5 bg-gradient-to-r from-brand-600 via-indigo-600 to-cyan-500 hover:scale-[1.02] text-white font-bold rounded-2xl shadow-lg shadow-cyan-500/15 transition flex items-center gap-2 text-xs"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Upload New Notes</span>
+            <span>Upload Notes</span>
           </Link>
         </div>
       </div>
@@ -158,6 +173,9 @@ export const DashboardPage = () => {
           </div>
         </div>
       )}
+
+      {/* Synchronized Knowledge Pulse Concept Map */}
+      <KnowledgePulse />
 
       {/* Recent Notes Section */}
       <div className="space-y-4">

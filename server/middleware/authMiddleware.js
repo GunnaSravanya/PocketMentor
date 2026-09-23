@@ -39,3 +39,11 @@ export const protect = async (req, res, next) => {
     return sendError(res, 500, "Authentication failure");
   }
 };
+
+export const adminOnly = (req, res, next) => {
+  if (req.user && req.user.role === "ADMIN") {
+    return next();
+  }
+  return sendError(res, 403, "Access forbidden. Administrator credentials required.");
+};
+

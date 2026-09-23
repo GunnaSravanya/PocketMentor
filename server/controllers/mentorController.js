@@ -334,44 +334,88 @@ export const submitQuiz = async (req, res) => {
       }
     });
 
-    // Compute weak and strong areas
+    // Optional Negative Marking configuration snapshot
+    const markingConfig = {
+      enabled: Boolean(req.body.marking?.enabled),
+      correctMarks: Number(req.body.marking?.correctMarks ?? 1),
+      negativeMarks: Number(req.body.marking?.negativeMarks ?? (req.body.marking?.enabled ? 0.25 : 0)),
+    };
+
+    // Calculate score with negative marking support
+    let finalScore = 0;
+    quiz.questions.forEach((q) => {
+      const qIdStr = q._id.toString();
+      const selected = (userAnswersMap[qIdStr] || "").trim();
+      const isAnswered = selected.length > 0 && selected.toLowerCase() !== "unanswered";
+      const isCorrect = selected.toLowerCase() === q.correctAnswer.trim().toLowerCase();
+
+      if (isCorrect) {
+        finalScore += markingConfig.correctMarks;
+      } else if (isAnswered && markingConfig.enabled) {
+        finalScore -= markingConfig.negativeMarks;
+      }
+    });
+
+    // Clamp score to >= 0 and round to 2 decimal places if negative marking is enabled
+    finalScore = markingConfig.enabled
+      ? Math.max(0, Math.round(finalScore * 100) / 100)
+      : correctCount;
+
+    // Compute weak and strong areas + granular topic mastery matrix
     const weakAreas = [];
     const strongAreas = [];
+    const topicMastery = [];
 
     Object.entries(topicStats).forEach(([topic, stats]) => {
       const accuracy = Math.round((stats.correct / stats.total) * 100);
+      const isMastered = accuracy >= WEAK_AREA_THRESHOLD;
+
       const areaData = {
         topic,
         correct: stats.correct,
         total: stats.total,
         accuracy,
+        mastered: isMastered,
       };
 
+      topicMastery.push(areaData);
+
       if (accuracy < WEAK_AREA_THRESHOLD) {
-        weakAreas.push(areaData);
+        weakAreas.push({
+          topic,
+          correct: stats.correct,
+          total: stats.total,
+          accuracy,
+          mastered: false,
+        });
       } else {
         strongAreas.push(areaData);
       }
     });
 
-    // Save QuizAttempt
+    // Save QuizAttempt with marking snapshot and topicMastery
     const attempt = await QuizAttemptModel.create({
       quizId: quiz._id,
       userId: req.user._id,
       answers: detailedAnswers,
-      score: correctCount,
+      score: finalScore,
       totalQuestions: quiz.questions.length,
       weakAreas,
+      marking: markingConfig,
+      topicMastery,
     });
 
     return sendSuccess(res, 201, "Quiz submitted successfully", {
       attemptId: attempt._id,
       quizId: quiz._id,
-      score: correctCount,
+      score: finalScore,
+      rawCorrect: correctCount,
       totalQuestions: quiz.questions.length,
       percentage: Math.round((correctCount / quiz.questions.length) * 100),
       weakAreas,
       strongAreas,
+      topicMastery,
+      marking: markingConfig,
       answers: detailedAnswers,
     });
   } catch (error) {
@@ -807,3 +851,25 @@ export const renameConversation = async (req, res) => {
     return sendError(res, 500, "Failed to rename conversation");
   }
 };
+
+/**
+ * Expose AI provider status safely without leaking keys
+ */
+export const getAiProviderStatus = async (req, res) => {
+  try {
+    const hasKey = Boolean(process.env.GROK_API_KEY && process.env.GROK_API_KEY.trim().length > 0 && process.env.GROK_API_KEY !== "your_grok_api_key_here");
+    const isGroq = process.env.GROK_API_KEY?.startsWith("gsk_");
+    const providerName = process.env.AI_PRIMARY_PROVIDER || (isGroq ? "groq" : "grok");
+
+    return sendSuccess(res, 200, "AI Engine Status", {
+      provider: providerName,
+      status: hasKey ? "operational" : "demo_fallback",
+      isFallbackAvailable: true,
+      model: process.env.GROK_MODEL || (isGroq ? "qwen/qwen3.8-27b" : "grok-2-latest"),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    return sendError(res, 500, "Failed to retrieve AI provider status");
+  }
+};
+

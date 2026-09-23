@@ -12,6 +12,7 @@ import { QuizResultPage } from "./pages/QuizResultPage";
 import { ReviseTopicPage } from "./pages/ReviseTopicPage";
 import { QuizHistoryPage } from "./pages/QuizHistoryPage";
 import { Chat } from "./pages/Chat";
+import { AdminPage } from "./pages/AdminPage";
 import { AppLayout } from "./layouts/AppLayout";
 import { AuthLayout } from "./layouts/AuthLayout";
 
@@ -37,6 +38,7 @@ export function App() {
           <Route path="notes/:noteId/flashcards" element={<FlashcardsPage />} />
           <Route path="chat" element={<Chat />} />
           <Route path="history" element={<QuizHistoryPage />} />
+          <Route path="admin" element={<AdminPage />} />
         </Route>
 
         {/* Quiz Flow Routes (Also within AppLayout) */}

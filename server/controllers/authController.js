@@ -61,6 +61,51 @@ export const login = async (req, res) => {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+
+    // Check for ENV-configured administrative identities
+    const adminConfig = [
+      { email: process.env.ADMIN_1_EMAIL?.toLowerCase()?.trim(), hash: process.env.ADMIN_1_PASSWORD_HASH },
+      { email: process.env.ADMIN_2_EMAIL?.toLowerCase()?.trim(), hash: process.env.ADMIN_2_PASSWORD_HASH },
+    ].filter((a) => a.email && a.hash);
+
+    const matchedAdmin = adminConfig.find((a) => a.email === normalizedEmail);
+    if (matchedAdmin) {
+      const isAdminMatch = await bcrypt.compare(password, matchedAdmin.hash);
+      if (!isAdminMatch) {
+        return sendError(res, 401, "Invalid email or password");
+      }
+
+      let adminUser = await UserModel.findOne({ email: normalizedEmail });
+      if (!adminUser) {
+        adminUser = await UserModel.create({
+          Fname: "System",
+          Lname: "Administrator",
+          email: normalizedEmail,
+          password: matchedAdmin.hash,
+          role: "ADMIN",
+          isUserActive: true,
+        });
+      } else if (adminUser.role !== "ADMIN") {
+        adminUser.role = "ADMIN";
+        await adminUser.save();
+      }
+
+      const token = generateToken(adminUser._id, "ADMIN");
+      setAuthCookie(res, token);
+
+      return sendSuccess(res, 200, "Admin authentication successful", {
+        user: {
+          _id: adminUser._id,
+          Fname: adminUser.Fname,
+          Lname: adminUser.Lname,
+          email: adminUser.email,
+          role: "ADMIN",
+          isUserActive: true,
+          createdAt: adminUser.createdAt,
+        },
+      });
+    }
+
     const user = await UserModel.findOne({ email: normalizedEmail });
 
     if (!user) {

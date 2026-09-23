@@ -38,8 +38,8 @@ export const mentorService = {
   getQuiz: (noteId) => api.post(`/api/mentor/quiz/${noteId}`),
   generateNewQuiz: (noteId) => api.post(`/api/mentor/quiz/${noteId}/new`),
   getQuizById: (quizId) => api.get(`/api/mentor/quiz/${quizId}`),
-  submitQuiz: (quizId, answers) =>
-    api.post(`/api/mentor/quiz/${quizId}/submit`, { answers }),
+  submitQuiz: (quizId, answers, marking = null) =>
+    api.post(`/api/mentor/quiz/${quizId}/submit`, { answers, marking }),
   getQuizAttempts: (quizId) => api.get(`/api/mentor/quiz/${quizId}/attempts`),
   getAttemptById: (attemptId) => api.get(`/api/mentor/attempt/${attemptId}`),
   reviseTopic: (attemptId, topic) =>

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { mentorService, noteService } from "../services/api";
 import { useSpeechSynthesis } from "../hooks/useSpeechSynthesis";
+import { mentorEvents } from "../services/mentorEvents";
 import {
   ArrowLeft,
   Volume2,
@@ -12,6 +13,7 @@ import {
   Loader2,
   Sparkles,
   BookOpen,
+  Bot,
 } from "lucide-react";
 
 export const SummaryPage = () => {
@@ -24,6 +26,23 @@ export const SummaryPage = () => {
 
   const { supported, isPlaying, isPaused, speak, pause, resume, stop } =
     useSpeechSynthesis();
+
+  // Synchronize Living Mentor state machine with speech status
+  useEffect(() => {
+    if (isPlaying && !isPaused) {
+      mentorEvents.summaryVoiceStart();
+    } else {
+      mentorEvents.summaryVoiceStop();
+    }
+
+    return () => {
+      // Audio interruption safety: stop talking immediately on navigation
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      mentorEvents.summaryVoiceStop();
+    };
+  }, [isPlaying, isPaused]);
 
   useEffect(() => {
     const loadData = async () => {

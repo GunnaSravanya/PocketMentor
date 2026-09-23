@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { mentorService } from "../services/api";
+import { mentorEvents } from "../services/mentorEvents";
 import {
   ArrowLeft,
   Sparkles,
@@ -11,6 +12,7 @@ import {
   HelpCircle,
   Loader2,
   ChevronRight,
+  Bot,
 } from "lucide-react";
 
 export const ReviseTopicPage = () => {
@@ -29,6 +31,7 @@ export const ReviseTopicPage = () => {
       try {
         setLoading(true);
         setError("");
+        mentorEvents.revisionStarted(decodeURIComponent(topic));
         const res = await mentorService.reviseTopic(attemptId, topic);
         if (res.data.success) {
           setRevision(res.data.data.revision);

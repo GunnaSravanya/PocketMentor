@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import authRoutes from "./routes/common/authRoutes.js";
 import noteRoutes from "./routes/common/noteRoutes.js";
 import mentorRoutes from "./routes/mentor/mentorRoutes.js";
+import adminRoutes from "./routes/common/adminRoutes.js";
 import { sendError } from "./utils/apiResponse.js";
 
 const app = express();
@@ -45,6 +46,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/common/auth", authRoutes);
 app.use("/api/common/notes", noteRoutes);
 app.use("/api/mentor", mentorRoutes);
+app.use("/api/admin", adminRoutes);
 
 // 404 Handler
 app.use("*", (req, res) => {

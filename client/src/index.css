@@ -15,9 +15,43 @@
   .rotate-y-180 {
     transform: rotateY(180deg);
   }
+
+  /* ===== MENTOR WORKSPACE UTILITIES ===== */
+
+  /* Deep cyber radial backdrop glow */
+  .bg-radial-glow {
+    background:
+      radial-gradient(circle at 75% 30%, rgba(6, 182, 212, 0.08), transparent 50%),
+      radial-gradient(circle at 25% 80%, rgba(168, 85, 247, 0.05), transparent 60%),
+      #09090e;
+  }
+
+  /* Glassmorphic panel */
+  .glass-panel {
+    background: rgba(8, 8, 20, 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  /* Slim dark scrollbar for message feed */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.01);
+    border-radius: 99px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #27272a;
+    border-radius: 99px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #3f3f46;
+  }
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar (global) */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -26,9 +60,28 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #334155;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #475569;
 }
+
+/* Live caption cursor blink */
+@keyframes caption-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.animate-caption-blink {
+  animation: caption-blink 0.9s ease-in-out infinite;
+}
+
+/* Mentor space fade-in */
+@keyframes mentorFadeIn {
+  from { opacity: 0; transform: scale(0.97) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.animate-mentor-in {
+  animation: mentorFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+

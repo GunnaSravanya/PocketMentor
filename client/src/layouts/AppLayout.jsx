@@ -3,6 +3,7 @@ import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { Navbar } from "../components/Navbar";
 import { FloatingChatbot } from "../components/FloatingChatbot";
+import { MentorSpaceModal } from "../components/mentor/MentorSpaceModal";
 import { Loader2 } from "lucide-react";
 
 export const AppLayout = () => {
@@ -37,6 +38,7 @@ export const AppLayout = () => {
         <Outlet />
       </main>
       <FloatingChatbot />
+      <MentorSpaceModal />
       <footer className="border-t border-slate-900 bg-slate-950/80 backdrop-blur py-6">
         <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
           Pocket Mentor — AI-Powered Study & Revision Assistant • Built for students

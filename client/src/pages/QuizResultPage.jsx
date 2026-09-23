@@ -14,7 +14,10 @@ import {
   Loader2,
   XCircle,
   Sparkles,
+  ShieldAlert,
+  Bot,
 } from "lucide-react";
+import { mentorEvents } from "../services/mentorEvents";
 
 export const QuizResultPage = () => {
   const { attemptId } = useParams();
@@ -29,6 +32,13 @@ export const QuizResultPage = () => {
       fetchAttempt(attemptId);
     }
   }, [attemptId, fetchAttempt]);
+
+  // Notify Living Mentor of quiz completion with topic breakdown
+  useEffect(() => {
+    if (currentAttempt) {
+      mentorEvents.quizCompleted(currentAttempt);
+    }
+  }, [currentAttempt]);
 
   if (loading || !currentAttempt) {
     return (
@@ -130,6 +140,13 @@ export const QuizResultPage = () => {
         <div className="text-5xl sm:text-6xl font-black text-white tracking-tight my-2 relative z-10">
           {score} <span className="text-slate-600 font-light text-3xl sm:text-4xl">/ {totalQuestions}</span>
         </div>
+
+        {currentAttempt.marking?.enabled && (
+          <div className="my-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-semibold relative z-10">
+            <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+            <span>Negative Marking Active (-{currentAttempt.marking.negativeMarks} per mistake)</span>
+          </div>
+        )}
 
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-950/80 border border-slate-800 text-slate-200 font-bold text-xs sm:text-sm relative z-10 shadow-inner">
           <span className="text-cyan-400">{percentage}% Mastery</span>

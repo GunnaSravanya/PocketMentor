@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { Logo } from "../components/Logo";
 import {
@@ -15,6 +16,9 @@ import {
   ShieldCheck,
   Star,
 } from "lucide-react";
+import FallbackMentor from "../components/mentor/FallbackMentor";
+
+const LivingMentor = lazy(() => import("../components/mentor/LivingMentor"));
 
 export const LandingPage = () => {
   return (
@@ -109,29 +113,35 @@ export const LandingPage = () => {
               </div>
             </div>
 
-            {/* Right Visual (Glowing Holographic Asset) */}
+            {/* Right Visual (Interactive Living AI Mentor Core) */}
             <div className="lg:col-span-5 relative flex items-center justify-center">
               <div className="relative w-full max-w-md aspect-square rounded-3xl p-1 bg-gradient-to-tr from-cyan-500/30 via-brand-500/20 to-purple-500/30 shadow-2xl shadow-cyan-500/10">
-                <div className="w-full h-full rounded-[22px] overflow-hidden bg-slate-900/90 relative group">
-                  <img
-                    src="/mentor-hero.jpg"
-                    alt="Pocket Mentor Holographic Study Visual"
-                    className="w-full h-full object-cover rounded-[22px] transition duration-700 group-hover:scale-105"
-                  />
+                <div className="w-full h-full rounded-[22px] overflow-hidden bg-slate-900/90 relative flex items-center justify-center">
+                  <Suspense
+                    fallback={
+                      <FallbackMentor
+                        currentState="IDLE"
+                        statusMessage="Synchronizing 3D Avatar..."
+                        size="hero"
+                      />
+                    }
+                  >
+                    <LivingMentor mode="hero" />
+                  </Suspense>
 
-                  {/* Glassmorphic floating badge */}
-                  <div className="absolute bottom-4 left-4 right-4 p-3.5 rounded-2xl bg-slate-950/80 backdrop-blur-md border border-white/10 flex items-center justify-between text-xs">
+                  {/* Glassmorphic floating telemetry badge */}
+                  <div className="absolute bottom-4 left-4 right-4 p-3 rounded-2xl bg-slate-950/80 backdrop-blur-md border border-white/10 flex items-center justify-between text-xs pointer-events-none z-10">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-bold">
-                        AI
+                      <div className="w-7 h-7 rounded-xl bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-bold text-[11px]">
+                        3D
                       </div>
                       <div>
-                        <p className="font-bold text-white">Smart Revision Active</p>
-                        <p className="text-[10px] text-slate-400">Auto-detecting weak areas &lt; 60%</p>
+                        <p className="font-bold text-white text-xs">Living AI Mentor</p>
+                        <p className="text-[10px] text-slate-400">Interactive Cursor Physics Active</p>
                       </div>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px] border border-emerald-500/30">
-                      Live
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px] border border-emerald-500/30 animate-pulse">
+                      Online
                     </span>
                   </div>
                 </div>

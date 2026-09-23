@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { Logo } from "./Logo";
+import { MentorStatusOrb } from "./mentor/MentorStatusOrb";
 import {
   LayoutDashboard,
   History,
@@ -10,6 +11,7 @@ import {
   X,
   Bot,
   PlusCircle,
+  ShieldAlert,
 } from "lucide-react";
 
 export const Navbar = () => {
@@ -27,6 +29,7 @@ export const Navbar = () => {
     { name: "Dashboard", href: "/app", icon: LayoutDashboard },
     { name: "AI Study Chatbot", href: "/app/chat", icon: Bot, isNew: true },
     { name: "Quiz History", href: "/app/history", icon: History },
+    ...(user?.role === "ADMIN" ? [{ name: "Admin", href: "/app/admin", icon: ShieldAlert }] : []),
   ];
 
   const isActive = (path) => {
@@ -80,6 +83,8 @@ export const Navbar = () => {
               <PlusCircle className="w-3.5 h-3.5" />
               <span>Upload Notes</span>
             </Link>
+
+            <MentorStatusOrb />
 
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 text-xs font-semibold">
               <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-brand-600 to-cyan-500 text-white flex items-center justify-center text-[10px] font-bold shadow-sm">

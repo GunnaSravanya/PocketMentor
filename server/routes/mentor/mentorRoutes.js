@@ -16,12 +16,16 @@ import {
   getConversationById,
   deleteConversation,
   renameConversation,
+  getAiProviderStatus,
 } from "../../controllers/mentorController.js";
 import { protect } from "../../middleware/authMiddleware.js";
 
 const router = Router();
 
 router.use(protect);
+
+// AI Provider Status
+router.get("/ai-status", getAiProviderStatus);
 
 // Summary
 router.post("/summary/:noteId", getOrGenerateSummary);

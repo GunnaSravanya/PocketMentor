@@ -14,6 +14,7 @@ import {
   Loader2,
   CheckCircle2,
 } from "lucide-react";
+import { mentorEvents } from "../services/mentorEvents";
 
 export const FlashcardsPage = () => {
   const { noteId } = useParams();
@@ -181,7 +182,10 @@ export const FlashcardsPage = () => {
 
           {/* Flashcard Area (Interactive Reveal / Flip) */}
           <div
-            onClick={() => setIsFlipped(!isFlipped)}
+            onClick={() => {
+              setIsFlipped(!isFlipped);
+              mentorEvents.flashcardFlip();
+            }}
             className={`cursor-pointer min-h-[340px] rounded-3xl p-8 sm:p-12 transition-all duration-300 flex flex-col justify-between select-none shadow-2xl backdrop-blur-sm border relative overflow-hidden ${
               isFlipped
                 ? "bg-gradient-to-br from-indigo-950 via-slate-900 to-brand-950 text-white border-brand-500/50 ring-1 ring-brand-500/20"
