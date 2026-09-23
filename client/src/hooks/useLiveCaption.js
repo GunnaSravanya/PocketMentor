@@ -1,3 +1,11 @@
+/**
+ * useLiveCaption
+ * Synchronized live caption & teleprompter hook using Web SpeechSynthesis.
+ * Progressively reveals spoken text and streams current sentence chunks in real time.
+ */
+import { useCallback, useRef } from "react";
+import { useMentorStore, MENTOR_STATES } from "../store/mentorStore";
+
 function stripMarkdownForSpeech(rawText) {
   if (!rawText) return "";
   return rawText
