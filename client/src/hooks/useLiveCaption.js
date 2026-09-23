@@ -1,14 +1,22 @@
-/**
- * useLiveCaption
- * Synchronized live caption & teleprompter hook using Web SpeechSynthesis.
- * Progressively reveals spoken text and streams current sentence chunks in real time.
- */
-import { useCallback, useRef } from "react";
-import { useMentorStore, MENTOR_STATES } from "../store/mentorStore";
+function stripMarkdownForSpeech(rawText) {
+  if (!rawText) return "";
+  return rawText
+    .replace(/#{1,6}\s*/g, "")               // Remove headings
+    .replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1")  // Remove bold/italics
+    .replace(/_{1,3}([^_]+)_{1,3}/g, "$1")  // Remove underscores
+    .replace(/`{1,3}[^`]*`{1,3}/g, "")        // Remove code blocks
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")  // Remove links
+    .replace(/^\s*[-*+]\s+/gm, "")           // Remove bullet items
+    .replace(/^\s*\d+\.\s+/gm, "")            // Remove numbered list prefixes
+    .replace(/\n+/g, " ")                    // Replace linebreaks with spaces
+    .replace(/\s+/g, " ")                    // Collapse whitespace
+    .trim();
+}
 
 export function useLiveCaption() {
   const { setLiveCaption, setSpokenText, setIsSpeaking, setMentorState } = useMentorStore();
   const fallbackTimerRef = useRef(null);
+  const resumeTimerRef = useRef(null);
   const utteranceRef = useRef(null);
 
   const stopSpeaking = useCallback(() => {
@@ -18,6 +26,10 @@ export function useLiveCaption() {
     if (fallbackTimerRef.current) {
       clearInterval(fallbackTimerRef.current);
       fallbackTimerRef.current = null;
+    }
+    if (resumeTimerRef.current) {
+      clearInterval(resumeTimerRef.current);
+      resumeTimerRef.current = null;
     }
     setIsSpeaking(false);
     setLiveCaption("");
@@ -35,7 +47,13 @@ export function useLiveCaption() {
       stopSpeaking();
       setSpokenText("");
 
-      const utterance = new SpeechSynthesisUtterance(text);
+      const cleanText = stripMarkdownForSpeech(text);
+      if (!cleanText) {
+        setSpokenText(text);
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(cleanText);
       utteranceRef.current = utterance;
 
       // Pick best natural English voice
@@ -48,6 +66,13 @@ export function useLiveCaption() {
       utterance.pitch = 1.0;
 
       let boundaryFired = false;
+
+      // Keep-alive timer for Chrome/Edge TTS 15-second pause bug
+      resumeTimerRef.current = setInterval(() => {
+        if (typeof window !== "undefined" && window.speechSynthesis && window.speechSynthesis.speaking) {
+          window.speechSynthesis.resume();
+        }
+      }, 4000);
 
       utterance.onstart = () => {
         setIsSpeaking(true);
@@ -77,7 +102,7 @@ export function useLiveCaption() {
             clearInterval(fallbackTimerRef.current);
             fallbackTimerRef.current = null;
           }
-        }, 320);
+        }, 300);
       };
 
       utterance.onboundary = (event) => {
@@ -86,12 +111,14 @@ export function useLiveCaption() {
           const charIndex = event.charIndex || 0;
 
           // Progressive reveal of full response up to current word
-          const nextSpace = text.indexOf(" ", charIndex);
-          const currentEnd = nextSpace !== -1 ? nextSpace : text.length;
-          setSpokenText(text.slice(0, currentEnd));
+          const nextSpace = cleanText.indexOf(" ", charIndex);
+          const currentEnd = nextSpace !== -1 ? nextSpace : cleanText.length;
+          const ratio = Math.min(1, currentEnd / Math.max(1, cleanText.length));
+          const displayCharIndex = Math.floor(ratio * text.length);
+          setSpokenText(text.slice(0, displayCharIndex));
 
           // Active sentence window for live caption banner
-          const preText = text.slice(0, charIndex);
+          const preText = cleanText.slice(0, charIndex);
           const lastSentenceEnd = Math.max(
             preText.lastIndexOf(". "),
             preText.lastIndexOf("! "),
@@ -99,11 +126,11 @@ export function useLiveCaption() {
           );
           const chunkStart = lastSentenceEnd !== -1 ? lastSentenceEnd + 2 : Math.max(0, charIndex - 40);
 
-          const postText = text.slice(charIndex);
+          const postText = cleanText.slice(charIndex);
           const nextSentenceEnd = postText.search(/[.!?](\s|$)/);
-          const chunkEnd = nextSentenceEnd !== -1 ? charIndex + nextSentenceEnd + 1 : Math.min(text.length, charIndex + 120);
+          const chunkEnd = nextSentenceEnd !== -1 ? charIndex + nextSentenceEnd + 1 : Math.min(cleanText.length, charIndex + 120);
 
-          const sentenceChunk = text.slice(chunkStart, chunkEnd).trim();
+          const sentenceChunk = cleanText.slice(chunkStart, chunkEnd).trim();
           if (sentenceChunk) {
             setLiveCaption(sentenceChunk);
           }
@@ -114,6 +141,10 @@ export function useLiveCaption() {
         if (fallbackTimerRef.current) {
           clearInterval(fallbackTimerRef.current);
           fallbackTimerRef.current = null;
+        }
+        if (resumeTimerRef.current) {
+          clearInterval(resumeTimerRef.current);
+          resumeTimerRef.current = null;
         }
         setIsSpeaking(false);
         setSpokenText(text); // Ensure 100% full text is displayed at finish
@@ -132,6 +163,10 @@ export function useLiveCaption() {
         if (fallbackTimerRef.current) {
           clearInterval(fallbackTimerRef.current);
           fallbackTimerRef.current = null;
+        }
+        if (resumeTimerRef.current) {
+          clearInterval(resumeTimerRef.current);
+          resumeTimerRef.current = null;
         }
         setIsSpeaking(false);
         setSpokenText(text);
